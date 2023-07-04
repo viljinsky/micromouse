@@ -1,6 +1,10 @@
 width = 16
 height = 16
 
+start = 0,0
+
+center = 8,8
+
 edge = 5, 0, 5, 1
 edge = 6, 1, 6, 2
 edge = 7, 2, 7, 3

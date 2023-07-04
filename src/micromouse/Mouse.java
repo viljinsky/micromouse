@@ -1,6 +1,5 @@
 package micromouse;
 
-import java.awt.List;
 import java.awt.Point;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -9,12 +8,46 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 enum Direction {
+    
     WE, NS, EW, SN;
+    
+    public Direction left(){
+        switch (this) {
+            case WE:
+                return SN;
+            case NS:
+                return WE;
+            case EW:
+                return  NS;
+            case SN:
+                return EW;
+            default:
+                return this;
+        }
+    }
+    
+    public Direction right(){
+        switch (this) {
+            case WE:
+                return NS;                
+            case NS:
+                return EW;
+            case EW:
+                return SN;
+            case SN:
+                return WE;
+             default:
+                return this;
+        }
+        
+    }
+    
 };
 
 class Node {
 
     int x;
+    
     int y;
 
     public Node(int x, int y) {
@@ -24,7 +57,7 @@ class Node {
 
     @Override
     public String toString() {
-        return "Node{" + "x=" + x + ", y=" + y + '}';
+        return "Node{" + "x=" + x + "; y=" + y + '}';
     }
 
     @Override
@@ -47,6 +80,7 @@ class Node {
 class Edge {
 
     Node node1;
+    
     Node node2;
 
     public Edge(Node node1, Node node2) {
@@ -73,7 +107,7 @@ class Edge {
 
     @Override
     public String toString() {
-        return "Edge{(" + node1.x + " " + node1.y + "),(" + node2.x + " " + node2.y + ")}";
+        return "Edge{(" + node1.x + " " + node1.y + ");(" + node2.x + " " + node2.y + ")}";
     }
 
 }
@@ -102,12 +136,11 @@ class Room {
 
     public Point center() {
         return new Point(col * Browser.EDGE_SIZE + Browser.EDGE_SIZE / 2, row * Browser.EDGE_SIZE + Browser.EDGE_SIZE / 2);
-
     }
 
     @Override
     public String toString() {
-        return "Room{ col " + col + "; row " + row + "}";
+        return "Room{col=" + col + "; row=" + row + "}";
     }
 
     @Override
@@ -131,34 +164,33 @@ class Room {
  *
  * @author viljinsky
  */
-class Field extends ArrayList<Node> {
-
-    Room start;
-    Node finish;
-
-    public Iterable<Room> rooms() {
-        ArrayList list = new ArrayList();
-        for (int col = 0; col < width; col++) {
-            for (int row = 0; row < height; row++) {
-                list.add(new Room(this, col, row));
-            }
-        }
-        return list;
-    }
-
-    ArrayList<ChangeListener> listeners = new ArrayList<>();
-
-    public void addChangeListener(ChangeListener listener) {
-        listeners.add(listener);
-    }
-
-    Mouse mouse;
-
-    ArrayList<Edge> edges = new ArrayList<>();
+class Field extends ArrayList<Room> {
 
     int width;
 
     int height;
+
+    ArrayList<Node> nodes = new ArrayList<>();
+    
+    ArrayList<Edge> edges = new ArrayList<>();
+
+    public Room start;
+
+    public Node finish;
+    
+    public boolean isFinish(Room room){
+        return room.contain(finish);
+    }
+
+    public int roomCount() {
+        return width * height;
+    }
+
+    private ArrayList<ChangeListener> listeners = new ArrayList<>();
+
+    public void addChangeListener(ChangeListener listener) {
+        listeners.add(listener);
+    }
 
     public Field() {
         defaultPlan();
@@ -171,7 +203,12 @@ class Field extends ArrayList<Node> {
         this.height = height;
         for (int x = 0; x <= width; x++) {
             for (int y = 0; y <= height; y++) {
-                add(new Node(x, y));
+                nodes.add(new Node(x, y));
+            }
+        }
+        for (int col = 0; col < width; col++) {
+            for (int row = 0; row < height; row++) {
+                add(new Room(this, col, row));
             }
         }
         start = room(0, 0);
@@ -211,7 +248,7 @@ class Field extends ArrayList<Node> {
 
         for (int i = 0; i <= width; i++) {
             for (int j = 0; j <= height; j++) {
-                add(new Node(i, j));
+                nodes.add(new Node(i, j));
             }
         }
 
@@ -226,11 +263,16 @@ class Field extends ArrayList<Node> {
             }
         }
 
+        for (int col = 0; col < width; col++) {
+            for (int row = 0; row < height; row++) {
+                add(new Room(this, col, row));
+            }
+        }
     }
 
     public Node nodeAt(int x, int y) {
 
-        for (Node node : this) {
+        for (Node node : nodes) {
             if (node.x == x && node.y == y) {
                 return node;
             }
@@ -261,20 +303,6 @@ class Field extends ArrayList<Node> {
             return null;
         }
         return new Room(this, col, row);
-    }
-
-    public Room nextLeftRoom(Room room, Direction direction) {
-        switch (direction) {
-            case EW:
-                return nextRoom(room, Direction.NS);
-            case WE:
-                return nextRoom(room, Direction.SN);
-            case SN:
-                return nextRoom(room, Direction.EW);
-            case NS:
-                return nextRoom(room, Direction.WE);
-        }
-        return null;
     }
 
     public Room nextRoom(Room room, Direction direction) {
@@ -311,9 +339,17 @@ class Field extends ArrayList<Node> {
 
 public class Mouse {
 
+    Field field;
+
+    Room room;
+
     ArrayList<Room> trace = new ArrayList<>();
 
-    void reset() {
+    Direction direction = Direction.WE;
+
+    private int position = -1;
+
+    public void reset() {
         room = field.start;
         direction = Direction.WE;
         trace.clear();
@@ -321,59 +357,25 @@ public class Mouse {
         field.change();
     }
 
-    Direction direction = Direction.WE;
+    private boolean flag = true;
+    
+    private int count = 0;
+    
+    private final int maxCount = 4;
 
-    Field field;
-
-    Room room;
-
-    public Mouse(Field field) {
-        this.field = field;
-        this.room = field.room(0, 0);
-        field.mouse = this;
-//        x = 0;
-//        y = 0;
-    }
+    private final long delay = 10;
 
     public void left() {
-        switch (direction) {
-            case WE:
-                direction = Direction.SN;
-                break;
-            case NS:
-                direction = Direction.WE;
-                break;
-            case EW:
-                direction = Direction.NS;
-                break;
-            case SN:
-                direction = Direction.EW;
-                break;
-        }
+        direction = direction.left();
         field.change();
     }
 
     public void right() {
-        switch (direction) {
-            case WE:
-                direction = Direction.NS;
-                break;
-            case NS:
-                direction = Direction.EW;
-                break;
-            case EW:
-                direction = Direction.SN;
-                break;
-            case SN:
-                direction = Direction.WE;
-                break;
-        }
+        direction = direction.right();
         field.change();
     }
 
-    private int position = -1;
-
-    public void forvard() {
+    public void forvard() throws Exception{
 
         Room tmp = field.nextRoom(room, direction);
         if (tmp != null) {
@@ -383,17 +385,60 @@ public class Mouse {
             }
             this.room = tmp;
             field.change();
+            if (field.isFinish(tmp)){
+                throw new Exception("!!!! GOOL !!!!");
+            }
         }
 
     }
 
-    public void step() {
+    public void start() {
+
+        flag = true;
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    while (flag) {
+                        step();
+                        long t = System.currentTimeMillis();
+                        do {
+                        } while (t + delay > System.currentTimeMillis());
+                    }
+                } catch (Exception e) {
+                    System.out.println("" + e.getMessage());
+                    flag = false;
+                }
+            }
+
+        }.start();
+    }
+
+    public void pause() {
+        flag = false;
+    }
+
+    private Room find(Room room) {
+        Room tmp;
+        for (Direction d : Direction.values()) {
+            tmp = field.nextRoom(room, d);
+            if (tmp != null
+                    && field.isOpen(tmp, d)
+                    && !trace.contains(tmp)) {
+                return tmp;
+            }
+        }
+        return null;
+    }
+
+    public void step() throws Exception{
 
         Room tmp;
-        tmp = field.nextLeftRoom(room, direction);
+        tmp = field.nextRoom(room, direction.left());
         if (tmp != null && !trace.contains(tmp)) {
             left();
             forvard();
+            count = 0;
             return;
         }
 
@@ -405,6 +450,18 @@ public class Mouse {
                 left();
             } else {
                 forvard();
+                count = 0;
+            }
+        }
+        if (++count > maxCount) {
+            System.err.println("count overlow");
+            trace.add(room);
+            for (int n = trace.size() - 1; n >= 0; n--) {
+                Room f = find(trace.get(n));
+                if (f != null) {
+                    this.room = trace.get(n);
+                    break;
+                }
             }
         }
 
@@ -421,4 +478,11 @@ public class Mouse {
 
         }
     }
+
+    public Mouse(Field field) {
+        this.field = field;
+        this.room = field.room(0, 0);
+//        field.mouse = this;
+    }
+
 }

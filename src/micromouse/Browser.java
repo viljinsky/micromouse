@@ -39,27 +39,37 @@ class CommandBar extends JPanel {
     public static final String PAUSE = "pause";
 
     private void doCommand(String command) {
-        switch (command) {
-            case STEP:
-                mouse.step();
-                break;
-            case RESET:
-                mouse.reset();
-                break;
-            case FORVARD:
-                mouse.forvard();
-                break;
-            case LEFT:
-                mouse.left();
-                break;
-            case BACK:
-                mouse.back();
-                break;
-            case RIGHT:
-                mouse.right();
-                break;
-            default:
-                JOptionPane.showMessageDialog(getParent(), "command \"" + command + "\" unsupported yet", "Error", JOptionPane.ERROR_MESSAGE);
+        try {
+            switch (command) {
+                case START:
+                    mouse.start();
+                    break;
+                case PAUSE:
+                    mouse.pause();
+                    break;
+                case STEP:
+                    mouse.step();
+                    break;
+                case RESET:
+                    mouse.reset();
+                    break;
+                case FORVARD:
+                    mouse.forvard();
+                    break;
+                case LEFT:
+                    mouse.left();
+                    break;
+                case BACK:
+                    mouse.back();
+                    break;
+                case RIGHT:
+                    mouse.right();
+                    break;
+                default:
+                    throw new Exception("command \"" + command + "\" unsupported yet");
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(getParent(), e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -75,7 +85,7 @@ class CommandBar extends JPanel {
 
     public CommandBar() {
         super(new FlowLayout(FlowLayout.LEFT));
-        for (String command : new String[]{STEP, FORVARD, BACK, LEFT, RIGHT, null, START, PAUSE, RESET}) {
+        for (String command : new String[]{START, PAUSE, STEP, RESET, null, FORVARD, BACK, LEFT, RIGHT}) {
             if (command == null) {
                 add(new JLabel(" "));
             } else {
@@ -150,36 +160,37 @@ class NodeListener extends MouseAdapter {
 
 }
 
-class Browser extends JPanel implements ChangeListener {
+public class Browser extends JPanel implements ChangeListener {
 
     public static int EDGE_SIZE = 40;
 
     public static int NODE_SIZE = 2;
 
     Field field;
-    
-    Rectangle roomRactangle(Room room){
+
+    Mouse mouse;
+
+    Rectangle roomRactangle(Room room) {
         Rectangle rect = new Rectangle();
         rect.width = EDGE_SIZE;
         rect.height = EDGE_SIZE;
-        rect.x = room.col*EDGE_SIZE;
-        rect.y = room.row*EDGE_SIZE;
+        rect.x = room.col * EDGE_SIZE;
+        rect.y = room.row * EDGE_SIZE;
         return rect;
     }
-    
-    private void drawStart(Graphics g){
+
+    private void drawStart(Graphics g) {
         Rectangle r = roomRactangle(field.start);
         g.setColor(Color.YELLOW);
-        g.fillRect(r.x, r.y,r.width,r.height);
+        g.fillRect(r.x, r.y, r.width, r.height);
     }
-    
-    private void drawFinish(Graphics g){
+
+    private void drawFinish(Graphics g) {
         g.setColor(Color.PINK);
-        for(Room room:field.rooms()){
-            System.out.println(room.toString()+" "+field.finish);
-            if (room.contain(field.finish)){
+        for (Room room : field) {
+            if (room.contain(field.finish)) {
                 Rectangle r = roomRactangle(room);
-                g.fillRect(r.x, r.y,r.width,r.height);
+                g.fillRect(r.x, r.y, r.width, r.height);
             }
         }
     }
@@ -191,6 +202,7 @@ class Browser extends JPanel implements ChangeListener {
 
     public Browser(Field field) {
         this.field = field;
+        mouse = new Mouse(field);
         addMouseListener(new NodeListener(this));
     }
 
@@ -211,7 +223,7 @@ class Browser extends JPanel implements ChangeListener {
 
         drawStart(g);
         drawFinish(g);
-        
+
         // рамка
         g.setColor(Color.GRAY);
         g.drawRect(0, 0, field.width * EDGE_SIZE, field.height * EDGE_SIZE);
@@ -235,7 +247,7 @@ class Browser extends JPanel implements ChangeListener {
             }
         }
 
-        Mouse mouse = field.mouse;
+//        Mouse mouse = field.mouse;
         if (mouse != null) {
             // мышь
             Room room = mouse.room;
@@ -278,16 +290,18 @@ class Browser extends JPanel implements ChangeListener {
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
+
+    public static void main(String[] args) {
+        new App().execute();
+    }
 }
 
 /**
  *
  * @author viljinsky
  */
-public class App implements ChangeListener {
+class App implements ChangeListener {
 
-    Field field;
-    Mouse mouse;
     Browser browser;
     StatusBar statusBar = new StatusBar();
     CommandBar commandBar = new CommandBar();
@@ -296,17 +310,16 @@ public class App implements ChangeListener {
     public void stateChanged(ChangeEvent e) {
 
         Field f = (Field) e.getSource();
-        Mouse m = f.mouse;
-        if (m != null) {
-            statusBar.setStatusText(m.room.toString());
+        Mouse mouse = browser.mouse;
+        if (mouse != null) {
+            statusBar.setStatusText(mouse.room.toString());
         }
     }
 
     public void execute() {
-        field = new Field();
-        mouse = new Mouse(field);
-        commandBar.setMouse(mouse);
+        Field field = new Field();
         browser = new Browser(field);
+        commandBar.setMouse(browser.mouse);
 
         field.addChangeListener(browser);
         field.addChangeListener(this);
@@ -318,13 +331,10 @@ public class App implements ChangeListener {
         c.add(commandBar, BorderLayout.PAGE_START);
         c.add(statusBar, BorderLayout.PAGE_END);
 
+        statusBar.setStatusText("field count " + field.roomCount());
         frame.pack();
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
-    }
-
-    public static void main(String[] args) {
-        new App().execute();
     }
 
 }
