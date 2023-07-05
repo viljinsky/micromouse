@@ -15,6 +15,7 @@ import javax.swing.AbstractAction;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenuBar;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -24,6 +25,7 @@ import static micromouse.Direction.WE;
 import static micromouse.Direction.NS;
 import static micromouse.Direction.EW;
 import static micromouse.Direction.SN;
+
 
 class CommandBar extends JPanel {
 
@@ -116,12 +118,13 @@ class StatusBar extends JPanel {
 
 class NodeListener extends MouseAdapter {
 
-    Field field;
+    Browser browser;
 
+//    Field field;
     Node start, stop;
 
     Node nodeAt(Point p) {
-
+        Field field = browser.field;
         for (int col = 0; col <= field.width; col++) {
             for (int row = 0; row <= field.height; row++) {
                 Rectangle bound = new Rectangle(col * Browser.EDGE_SIZE - 2, row * Browser.EDGE_SIZE - 2, 5, 5);
@@ -133,9 +136,29 @@ class NodeListener extends MouseAdapter {
         return null;
     }
 
+    public void addWall(Node n1, Node n2) {
+        Field field = browser.field;
+
+        int x1 = Math.min(n1.x, n2.x);
+        int x2 = Math.max(n1.x, n2.x);
+        int y1 = Math.min(n1.y, n2.y);
+        int y2 = Math.max(n1.y, n2.y);
+
+        for (int i = x1; i < x2; i++) {
+            field.addEdge(i, y1, i + 1, y1);
+        }
+
+        for (int i = y1; i < y2; i++) {
+            field.addEdge(x2, i, x2, i + 1);
+        }
+        field.change();
+
+    }
+
     public NodeListener(Browser browser) {
+        this.browser = browser;
         browser.addMouseListener(this);
-        this.field = browser.field;
+//        this.field = browser.field;
 
     }
 
@@ -143,18 +166,18 @@ class NodeListener extends MouseAdapter {
     public void mousePressed(MouseEvent e) {
         stop = null;
         start = nodeAt(e.getPoint());
-        if (start != null) {
-            System.out.println("start");
-        }
+//        if (start != null) {
+//            System.out.println("start");
+//        }
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
         stop = nodeAt(e.getPoint());
         if (start != null && stop != null) {
-            System.out.println("stop");
-            field.addEdge(start.x, start.y, stop.x, stop.y);
-            field.change();
+            addWall(start, stop);
+            start = null;
+            stop = null;
         }
     }
 
@@ -290,6 +313,10 @@ public class Browser extends JPanel implements ChangeListener {
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
+    
+    public void showMessage(String message){
+        JOptionPane.showMessageDialog(getParent(), message);
+    }
 
     public static void main(String[] args) {
         new App().execute();
@@ -319,6 +346,7 @@ class App implements ChangeListener {
     public void execute() {
         Field field = new Field();
         browser = new Browser(field);
+        FileManager fileManager = new FileManager(browser);
         commandBar.setMouse(browser.mouse);
 
         field.addChangeListener(browser);
@@ -332,6 +360,9 @@ class App implements ChangeListener {
         c.add(statusBar, BorderLayout.PAGE_END);
 
         statusBar.setStatusText("field count " + field.roomCount());
+        JMenuBar menuBar = new JMenuBar();
+        menuBar.add(fileManager.menu());
+        frame.setJMenuBar(menuBar);
         frame.pack();
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);

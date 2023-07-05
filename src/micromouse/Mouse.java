@@ -1,53 +1,55 @@
 package micromouse;
 
+import java.awt.List;
 import java.awt.Point;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.StringJoiner;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 enum Direction {
-    
+
     WE, NS, EW, SN;
-    
-    public Direction left(){
+
+    public Direction left() {
         switch (this) {
             case WE:
                 return SN;
             case NS:
                 return WE;
             case EW:
-                return  NS;
+                return NS;
             case SN:
                 return EW;
             default:
                 return this;
         }
     }
-    
-    public Direction right(){
+
+    public Direction right() {
         switch (this) {
             case WE:
-                return NS;                
+                return NS;
             case NS:
                 return EW;
             case EW:
                 return SN;
             case SN:
                 return WE;
-             default:
+            default:
                 return this;
         }
-        
+
     }
-    
+
 };
 
 class Node {
 
     int x;
-    
+
     int y;
 
     public Node(int x, int y) {
@@ -80,7 +82,7 @@ class Node {
 class Edge {
 
     Node node1;
-    
+
     Node node2;
 
     public Edge(Node node1, Node node2) {
@@ -166,19 +168,19 @@ class Room {
  */
 class Field extends ArrayList<Room> {
 
-    int width;
+    int width = -1;
 
-    int height;
+    int height = -1;
 
     ArrayList<Node> nodes = new ArrayList<>();
-    
+
     ArrayList<Edge> edges = new ArrayList<>();
 
     public Room start;
 
     public Node finish;
-    
-    public boolean isFinish(Room room){
+
+    public boolean isFinish(Room room) {
         return room.contain(finish);
     }
 
@@ -216,8 +218,8 @@ class Field extends ArrayList<Room> {
     }
 
     private void defaultPlan() {
-        width = 0;
-        height = 0;
+        width = -1;
+        height = -1;
         StringBuilder sb = new StringBuilder();
         try (
                 InputStream str = getClass().getResourceAsStream("/micromouse/plan"); InputStreamReader reader = new InputStreamReader(str, "utf-8");) {
@@ -237,15 +239,17 @@ class Field extends ArrayList<Room> {
                 continue;
             }
             String[] values = s.split("=");
-            switch (values[0].trim()) {
-                case "width":
-                    width = Integer.valueOf(values[1].trim());
-                    break;
-                case "height":
-                    height = Integer.valueOf(values[1].trim());
+            if (values[0].trim().equals("size")) {
+                String[] s1 = values[1].split(",");
+                width = Integer.valueOf(s1[0].trim());
+                height = Integer.valueOf(s1[1].trim());
             }
         }
 
+        if (width == -1 || height == -1) {
+            width = 8;
+            height = 8;
+        }
         for (int i = 0; i <= width; i++) {
             for (int j = 0; j <= height; j++) {
                 nodes.add(new Node(i, j));
@@ -286,7 +290,10 @@ class Field extends ArrayList<Room> {
         if (n1 == null || n2 == null) {
             throw new RuntimeException("incorrect args ");
         }
-        edges.add(new Edge(n1, n2));
+        Edge e = new Edge(n1, n2);
+        if (!edges.contains(e)) {
+            edges.add(new Edge(n1, n2));
+        }
     }
 
     public void change() {
@@ -337,6 +344,41 @@ class Field extends ArrayList<Room> {
 
 }
 
+class Move {
+
+    Direction direction;
+
+    Integer count;
+
+    public Move(Direction direction, Integer count) {
+        this.direction = direction;
+        this.count = count;
+    }
+
+    @Override
+    public String toString() {
+        return direction.name();
+    }
+
+}
+
+class Path extends ArrayList<Move> {
+
+    Room room;
+
+    public Path(Room room) {
+        this.room = room;
+    }
+
+    public String toString() {
+        StringJoiner s = new StringJoiner("-", room.toString(), "\n");
+        for (Move m : this) {
+            s.add(m.toString());
+        }
+        return s.toString();
+    }
+}
+
 public class Mouse {
 
     Field field;
@@ -358,9 +400,9 @@ public class Mouse {
     }
 
     private boolean flag = true;
-    
+
     private int count = 0;
-    
+
     private final int maxCount = 4;
 
     private final long delay = 10;
@@ -375,7 +417,15 @@ public class Mouse {
         field.change();
     }
 
-    public void forvard() throws Exception{
+    public void resolve() {
+        for (Object obj : graph) {
+            Path p = (Path) obj;
+            System.out.println(p.toString());
+
+        }
+    }
+
+    public void forvard() throws Exception {
 
         Room tmp = field.nextRoom(room, direction);
         if (tmp != null) {
@@ -385,14 +435,68 @@ public class Mouse {
             }
             this.room = tmp;
             field.change();
-            if (field.isFinish(tmp)){
+            if (field.isFinish(tmp)) {
+                resolve();
                 throw new Exception("!!!! GOOL !!!!");
+            }
+            path.add(new Move(direction, 1));
+        }
+
+    }
+
+    Path path;
+
+    ArrayList graph;
+
+    public void step() throws Exception {
+
+        Room tmp;
+        tmp = field.nextRoom(room, direction.left());
+        if (tmp != null && !trace.contains(tmp)) {
+            left();
+            forvard();
+            path.add(new Move(direction, 1));
+            count = 0;
+            return;
+        }
+
+        tmp = field.nextRoom(room, direction);
+        if (tmp == null) {
+            left();
+        } else {
+            if (trace.contains(tmp)) {
+                left();
+            } else {
+                forvard();
+                path.add(new Move(direction, 1));
+                count = 0;
+            }
+        }
+        if (++count > maxCount) {
+
+            System.err.println("count overlow");
+            trace.add(room);
+            for (int n = trace.size() - 1; n >= 0; n--) {
+                Room f = find(trace.get(n));
+                if (f != null) {
+
+                    if (path.size() > 0) {
+                        graph.add(path);
+                    }
+                    path = new Path(f);
+
+                    this.room = trace.get(n);
+                    break;
+                }
             }
         }
 
     }
 
     public void start() {
+
+        path = new Path(room);
+        graph = new ArrayList();
 
         flag = true;
         new Thread() {
@@ -425,46 +529,11 @@ public class Mouse {
             if (tmp != null
                     && field.isOpen(tmp, d)
                     && !trace.contains(tmp)) {
+
                 return tmp;
             }
         }
         return null;
-    }
-
-    public void step() throws Exception{
-
-        Room tmp;
-        tmp = field.nextRoom(room, direction.left());
-        if (tmp != null && !trace.contains(tmp)) {
-            left();
-            forvard();
-            count = 0;
-            return;
-        }
-
-        tmp = field.nextRoom(room, direction);
-        if (tmp == null) {
-            left();
-        } else {
-            if (trace.contains(tmp)) {
-                left();
-            } else {
-                forvard();
-                count = 0;
-            }
-        }
-        if (++count > maxCount) {
-            System.err.println("count overlow");
-            trace.add(room);
-            for (int n = trace.size() - 1; n >= 0; n--) {
-                Room f = find(trace.get(n));
-                if (f != null) {
-                    this.room = trace.get(n);
-                    break;
-                }
-            }
-        }
-
     }
 
     public void back() {
