@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package micromouse;
 
 import java.awt.event.ActionEvent;
@@ -20,6 +16,7 @@ class FileManager {
     public static final String OPEN = "open";
     public static final String SAVE = "save";
     public static final String EXIT = "exit";
+    
     Browser browser;
 
     public FileManager(Browser browser) {
@@ -27,18 +24,18 @@ class FileManager {
     }
 
     void doCommand(String command) {
-        Field field = browser.field;
+        Maze maze = browser.maze;
         switch (command) {
             case CLEAR:
-                field.edges.clear();
-                field.change();
+                maze.edges.clear();
+                maze.change();
                 break;
             case EXIT:
                 System.exit(0);
             case SAVE:
                 StringBuilder stringBuilder = new StringBuilder();
-                stringBuilder.append(String.format("size = %d,%d\n", field.width, field.height));
-                for (Edge edge : field.edges) {
+                stringBuilder.append(String.format("size = %d,%d\n", maze.width, maze.height));
+                for (Edge edge : maze.edges) {
                     stringBuilder.append(String.format("edge = %d,%d,%d,%d\n", edge.node1.x, edge.node1.y, edge.node2.x, edge.node2.y));
                 }
                 System.out.println("" + stringBuilder.toString());

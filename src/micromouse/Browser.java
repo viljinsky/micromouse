@@ -32,17 +32,16 @@ class CommandBar extends JPanel {
     Mouse mouse;
 
     public static final String RESET = "reset";
-    public static final String FORVARD = "forward";
-    public static final String LEFT = "left";
-    public static final String RIGHT = "rignt";
     public static final String STEP = "step";
-    public static final String BACK = "back";
     public static final String START = "start";
     public static final String PAUSE = "pause";
 
     private void doCommand(String command) {
         try {
             switch (command) {
+                case RESET:
+                    mouse.reset();
+                    break;
                 case START:
                     mouse.start();
                     break;
@@ -51,21 +50,6 @@ class CommandBar extends JPanel {
                     break;
                 case STEP:
                     mouse.step();
-                    break;
-                case RESET:
-                    mouse.reset();
-                    break;
-                case FORVARD:
-                    mouse.forvard();
-                    break;
-                case LEFT:
-                    mouse.left();
-                    break;
-                case BACK:
-                    mouse.back();
-                    break;
-                case RIGHT:
-                    mouse.right();
                     break;
                 default:
                     throw new Exception("command \"" + command + "\" unsupported yet");
@@ -87,7 +71,7 @@ class CommandBar extends JPanel {
 
     public CommandBar() {
         super(new FlowLayout(FlowLayout.LEFT));
-        for (String command : new String[]{START, PAUSE, STEP, RESET, null, FORVARD, BACK, LEFT, RIGHT}) {
+        for (String command : new String[]{START, PAUSE, STEP, RESET}) {
             if (command == null) {
                 add(new JLabel(" "));
             } else {
@@ -120,62 +104,39 @@ class NodeListener extends MouseAdapter {
 
     Browser browser;
 
-//    Field field;
     Node start, stop;
 
     Node nodeAt(Point p) {
-        Field field = browser.field;
-        for (int col = 0; col <= field.width; col++) {
-            for (int row = 0; row <= field.height; row++) {
+        Maze maze = browser.maze;
+        for (int col = 0; col <= maze.width; col++) {
+            for (int row = 0; row <= maze.height; row++) {
                 Rectangle bound = new Rectangle(col * Browser.EDGE_SIZE - 2, row * Browser.EDGE_SIZE - 2, 5, 5);
                 if (bound.contains(p)) {
-                    return field.nodeAt(col, row);
+                    return maze.nodeAt(col, row);
                 }
             }
         }
         return null;
     }
 
-    public void addWall(Node n1, Node n2) {
-        Field field = browser.field;
-
-        int x1 = Math.min(n1.x, n2.x);
-        int x2 = Math.max(n1.x, n2.x);
-        int y1 = Math.min(n1.y, n2.y);
-        int y2 = Math.max(n1.y, n2.y);
-
-        for (int i = x1; i < x2; i++) {
-            field.addEdge(i, y1, i + 1, y1);
-        }
-
-        for (int i = y1; i < y2; i++) {
-            field.addEdge(x2, i, x2, i + 1);
-        }
-        field.change();
-
-    }
 
     public NodeListener(Browser browser) {
         this.browser = browser;
         browser.addMouseListener(this);
-//        this.field = browser.field;
-
     }
 
     @Override
     public void mousePressed(MouseEvent e) {
         stop = null;
         start = nodeAt(e.getPoint());
-//        if (start != null) {
-//            System.out.println("start");
-//        }
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
         stop = nodeAt(e.getPoint());
         if (start != null && stop != null) {
-            addWall(start, stop);
+            browser.maze.wall(start, stop);
+            browser.repaint();
             start = null;
             stop = null;
         }
@@ -189,7 +150,7 @@ public class Browser extends JPanel implements ChangeListener {
 
     public static int NODE_SIZE = 2;
 
-    Field field;
+    Maze maze;
 
     Mouse mouse;
 
@@ -203,15 +164,15 @@ public class Browser extends JPanel implements ChangeListener {
     }
 
     private void drawStart(Graphics g) {
-        Rectangle r = roomRactangle(field.start);
+        Rectangle r = roomRactangle(maze.start);
         g.setColor(Color.YELLOW);
         g.fillRect(r.x, r.y, r.width, r.height);
     }
 
     private void drawFinish(Graphics g) {
         g.setColor(Color.PINK);
-        for (Room room : field) {
-            if (room.contain(field.finish)) {
+        for (Room room : maze) {
+            if (room.contain(maze.finish)) {
                 Rectangle r = roomRactangle(room);
                 g.fillRect(r.x, r.y, r.width, r.height);
             }
@@ -223,15 +184,15 @@ public class Browser extends JPanel implements ChangeListener {
         repaint();
     }
 
-    public Browser(Field field) {
-        this.field = field;
-        mouse = new Mouse(field);
+    public Browser(Maze maze) {
+        this.maze = maze;
+        mouse = new Mouse(maze);
         addMouseListener(new NodeListener(this));
     }
 
     @Override
     public Dimension getPreferredSize() {
-        return new Dimension((field.width) * EDGE_SIZE, (field.height) * EDGE_SIZE);
+        return new Dimension((maze.width) * EDGE_SIZE, (maze.height) * EDGE_SIZE);
     }
 
     @Override
@@ -240,7 +201,7 @@ public class Browser extends JPanel implements ChangeListener {
         Rectangle rr = g.getClipBounds();
         g.fillRect(rr.x, rr.y, rr.width, rr.height);
 
-        if (field.isEmpty()) {
+        if (maze.isEmpty()) {
             return;
         }
 
@@ -249,19 +210,19 @@ public class Browser extends JPanel implements ChangeListener {
 
         // рамка
         g.setColor(Color.GRAY);
-        g.drawRect(0, 0, field.width * EDGE_SIZE, field.height * EDGE_SIZE);
+        g.drawRect(0, 0, maze.width * EDGE_SIZE, maze.height * EDGE_SIZE);
 
         // рёбра
         g.setColor(Color.GRAY);
-        for (Edge edge : field.edges) {
+        for (Edge edge : maze.edges) {
             Node n1 = edge.node1;
             Node n2 = edge.node2;
             g.drawLine(n1.x * EDGE_SIZE, n1.y * EDGE_SIZE, n2.x * EDGE_SIZE, n2.y * EDGE_SIZE);
         }
         // узлы
-        for (int x = 0; x <= field.width; x++) {
-            for (int y = 0; y <= field.height; y++) {
-                Node node = field.nodeAt(x, y);
+        for (int x = 0; x <= maze.width; x++) {
+            for (int y = 0; y <= maze.height; y++) {
+                Node node = maze.nodeAt(x, y);
                 Rectangle t = new Rectangle(node.x * EDGE_SIZE - NODE_SIZE, node.y * EDGE_SIZE - NODE_SIZE, NODE_SIZE * 2, NODE_SIZE * 2);
                 g.setColor(Color.WHITE);
                 g.fillRect(t.x, t.y, t.width, t.height);
@@ -336,7 +297,6 @@ class App implements ChangeListener {
     @Override
     public void stateChanged(ChangeEvent e) {
 
-        Field f = (Field) e.getSource();
         Mouse mouse = browser.mouse;
         if (mouse != null) {
             statusBar.setStatusText(mouse.room.toString());
@@ -344,13 +304,23 @@ class App implements ChangeListener {
     }
 
     public void execute() {
-        Field field = new Field();
-        browser = new Browser(field);
+
+        Maze maze = new Maze();
+
+//        Field field = new Field(16,16);
+//        field.wall(0,1,3,1);
+//        field.wall(4,1,16,1);
+        
+//        field.wall(15,1,15,15);
+//        field.wall(15,15,1,15);
+//        field.wall(1,15,1,1);
+        
+        browser = new Browser(maze);
         FileManager fileManager = new FileManager(browser);
         commandBar.setMouse(browser.mouse);
 
-        field.addChangeListener(browser);
-        field.addChangeListener(this);
+        maze.addChangeListener(browser);
+        maze.addChangeListener(this);
 
         JFrame frame = new JFrame("MicroMouse v1.0");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -359,7 +329,7 @@ class App implements ChangeListener {
         c.add(commandBar, BorderLayout.PAGE_START);
         c.add(statusBar, BorderLayout.PAGE_END);
 
-        statusBar.setStatusText("field count " + field.roomCount());
+        statusBar.setStatusText("field count " + maze.roomCount());
         JMenuBar menuBar = new JMenuBar();
         menuBar.add(fileManager.menu());
         frame.setJMenuBar(menuBar);
