@@ -26,7 +26,6 @@ import static micromouse.Direction.NS;
 import static micromouse.Direction.EW;
 import static micromouse.Direction.SN;
 
-
 class CommandBar extends JPanel {
 
     Mouse mouse;
@@ -49,7 +48,14 @@ class CommandBar extends JPanel {
                     mouse.pause();
                     break;
                 case STEP:
-                    mouse.step();
+                    if (!mouse.step()){
+                        for(Object l:mouse.graph){
+                            Path p = (Path)l;
+                            System.out.println(p);
+                        }
+                        JOptionPane.showMessageDialog(getParent(), mouse.getStatus());
+                        
+                    };
                     break;
                 default:
                     throw new Exception("command \"" + command + "\" unsupported yet");
@@ -100,43 +106,51 @@ class StatusBar extends JPanel {
     }
 }
 
+class EdgeListener extends MouseAdapter {
+
+    Browser browser;
+    
+    public EdgeListener(Browser browser) {
+        this.browser = browser;
+    }
+    
+    @Override
+    public void mousePressed(MouseEvent e) {
+        
+        Edge edge = browser.edgeAt(e.getPoint());
+        if(edge!=null){
+            browser.edgeClick(edge);
+        }
+        
+    }
+
+}
+
 class NodeListener extends MouseAdapter {
 
     Browser browser;
 
     Node start, stop;
 
-    Node nodeAt(Point p) {
-        Maze maze = browser.maze;
-        for (int col = 0; col <= maze.width; col++) {
-            for (int row = 0; row <= maze.height; row++) {
-                Rectangle bound = new Rectangle(col * Browser.EDGE_SIZE - 2, row * Browser.EDGE_SIZE - 2, 5, 5);
-                if (bound.contains(p)) {
-                    return maze.nodeAt(col, row);
-                }
-            }
-        }
-        return null;
-    }
-
 
     public NodeListener(Browser browser) {
         this.browser = browser;
-        browser.addMouseListener(this);
     }
 
     @Override
     public void mousePressed(MouseEvent e) {
         stop = null;
-        start = nodeAt(e.getPoint());
+        start = browser.nodeAt(e.getPoint());
+        if (start!=null){
+            browser.nodeClick(start);
+        }
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
-        stop = nodeAt(e.getPoint());
+        stop = browser.nodeAt(e.getPoint());
         if (start != null && stop != null) {
-            browser.maze.wall(start, stop);
-            browser.repaint();
+            browser.wall(start, stop);
             start = null;
             stop = null;
         }
@@ -153,6 +167,73 @@ public class Browser extends JPanel implements ChangeListener {
     Maze maze;
 
     Mouse mouse;
+    
+    public Node nodeAt(Point p) {
+        for (int col = 0; col <= maze.width; col++) {
+            for (int row = 0; row <= maze.height; row++) {
+                Rectangle bound = new Rectangle(col * EDGE_SIZE - 2, row * EDGE_SIZE - 2, 5, 5);
+                if (bound.contains(p)) {
+                    return maze.nodeAt(col, row);
+                }
+            }
+        }
+        return null;
+    }
+    
+    public void wall(Node node1,Node node2){
+        maze.wall(node1, node2);
+        repaint();
+    }
+        
+    public Edge edgeAt(Point p){
+        int w;
+        int h;
+        int x;
+        int y;
+        Rectangle r;
+        
+        for (Edge edge : maze.edges) {
+            int x1 = edge.node1.x * EDGE_SIZE;
+            int y1 = edge.node1.y * EDGE_SIZE;
+            int x2 = edge.node2.x * EDGE_SIZE;
+            int y2 = edge.node2.y * EDGE_SIZE;
+
+            // horizontal
+            if (y1 == y2) {
+                h = 5;
+                w = Math.abs(x2 - x1);
+                y = y1;
+                x = Math.min(x1, x2);
+                r = new Rectangle(x+h/2, y-h/2, w-h, h);
+                if (r.contains(p)) {
+                    return edge;
+                }
+
+            }
+            // vertical
+            if (x1 == x2) {
+                h = Math.abs(y2 - y1);
+                w = 5;
+                x = x1;
+                y = Math.min(y1, y2);
+                r = new Rectangle(x, y+w/2, w, h-w);
+                if (r.contains(p)) {
+                    return edge;
+                }
+            }
+        }
+        return null;
+    }
+
+    public void edgeClick(Edge edge){
+        maze.edges.remove(edge);
+        repaint();
+        System.out.println("edge click "+edge);
+    }
+    
+    public void nodeClick(Node node){
+        System.out.println("node click "+node);
+    }
 
     Rectangle roomRactangle(Room room) {
         Rectangle rect = new Rectangle();
@@ -182,17 +263,6 @@ public class Browser extends JPanel implements ChangeListener {
     @Override
     public void stateChanged(ChangeEvent e) {
         repaint();
-    }
-
-    public Browser(Maze maze) {
-        this.maze = maze;
-        mouse = new Mouse(maze);
-        addMouseListener(new NodeListener(this));
-    }
-
-    @Override
-    public Dimension getPreferredSize() {
-        return new Dimension((maze.width) * EDGE_SIZE, (maze.height) * EDGE_SIZE);
     }
 
     @Override
@@ -274,9 +344,17 @@ public class Browser extends JPanel implements ChangeListener {
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
-    
-    public void showMessage(String message){
+
+    public void showMessage(String message) {
         JOptionPane.showMessageDialog(getParent(), message);
+    }
+
+    public Browser(Maze maze) {
+        this.maze = maze;        
+        mouse = new Mouse(maze);
+        setPreferredSize(new Dimension(maze.width * EDGE_SIZE, maze.height * EDGE_SIZE));
+        addMouseListener(new NodeListener(this));
+        addMouseListener(new EdgeListener(this));
     }
 
     public static void main(String[] args) {
@@ -291,7 +369,9 @@ public class Browser extends JPanel implements ChangeListener {
 class App implements ChangeListener {
 
     Browser browser;
+    
     StatusBar statusBar = new StatusBar();
+    
     CommandBar commandBar = new CommandBar();
 
     @Override
@@ -310,11 +390,9 @@ class App implements ChangeListener {
 //        Field field = new Field(16,16);
 //        field.wall(0,1,3,1);
 //        field.wall(4,1,16,1);
-        
 //        field.wall(15,1,15,15);
 //        field.wall(15,15,1,15);
 //        field.wall(1,15,1,1);
-        
         browser = new Browser(maze);
         FileManager fileManager = new FileManager(browser);
         commandBar.setMouse(browser.mouse);
@@ -329,7 +407,8 @@ class App implements ChangeListener {
         c.add(commandBar, BorderLayout.PAGE_START);
         c.add(statusBar, BorderLayout.PAGE_END);
 
-        statusBar.setStatusText("field count " + maze.roomCount());
+        statusBar.setStatusText("maze" + maze.width+" X "+maze.height);
+        
         JMenuBar menuBar = new JMenuBar();
         menuBar.add(fileManager.menu());
         frame.setJMenuBar(menuBar);

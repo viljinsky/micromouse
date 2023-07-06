@@ -1,8 +1,12 @@
 package micromouse;
 
 import java.awt.Point;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -160,8 +164,6 @@ class Room {
 
 }
 
-
-
 /**
  *
  * @author viljinsky
@@ -175,47 +177,11 @@ public class Maze extends ArrayList<Room> {
     public Room start;
     public Node finish;
 
-    public boolean isFinish(Room room) {
-        return room.contain(finish);
-    }
-
-    public int roomCount() {
-        return width * height;
-    }
-    private ArrayList<ChangeListener> listeners = new ArrayList<>();
-
-    public void addChangeListener(ChangeListener listener) {
-        listeners.add(listener);
-    }
-
-    public Maze() {
-        defaultPlan();
-        start = room(0, 0);
-        finish = nodeAt(width / 2, width / 2);
-    }
-
-    public Maze(int width, int height) {
-        this.width = width;
-        this.height = height;
-        for (int x = 0; x <= width; x++) {
-            for (int y = 0; y <= height; y++) {
-                nodes.add(new Node(x, y));
-            }
-        }
-        for (int col = 0; col < width; col++) {
-            for (int row = 0; row < height; row++) {
-                add(new Room(this, col, row));
-            }
-        }
-        start = room(0, 0);
-        finish = nodeAt(width / 2, width / 2);
-    }
-
-    private void defaultPlan() {
+    public void read(InputStream str) throws Exception {
         width = -1;
         height = -1;
         StringBuilder sb = new StringBuilder();
-        try (InputStream str = getClass().getResourceAsStream("/micromouse/plan");InputStreamReader reader = new InputStreamReader(str, "utf-8")) {
+        try (InputStreamReader reader = new InputStreamReader(str, "utf-8")) {
             char[] buf = new char[1000];
             int count;
             while ((count = reader.read(buf)) > 0) {
@@ -226,8 +192,8 @@ public class Maze extends ArrayList<Room> {
         }
         String[] lines = sb.toString().split("\n");
         for (String s : lines) {
-            int n =s.indexOf("\\");
-            s = s.substring(0,n==-1?s.length():n);
+            int n = s.indexOf("\\");
+            s = s.substring(0, n == -1 ? s.length() : n);
             if (s.trim().isEmpty()) {
                 continue;
             }
@@ -262,6 +228,65 @@ public class Maze extends ArrayList<Room> {
                 add(new Room(this, col, row));
             }
         }
+
+    }
+
+    public void write(OutputStream out) throws Exception {
+
+        try (OutputStreamWriter writer = new OutputStreamWriter(out, "utf-8");) {
+            writer.write(String.format("size = %d,%d\n", width, height));
+            for (Edge edge : edges) {
+                writer.write(String.format("edge = %d,%d,%d,%d\n", edge.node1.x, edge.node1.y, edge.node2.x, edge.node2.y));
+            }
+        }
+    }
+
+    public boolean isFinish(Room room) {
+        return room.contain(finish);
+    }
+
+    private ArrayList<ChangeListener> listeners = new ArrayList<>();
+
+    public void addChangeListener(ChangeListener listener) {
+        listeners.add(listener);
+    }
+
+    File file = new File("maze.ini");
+
+    public Maze() {
+        this(16, 16);
+        InputStream in;
+        try {
+            if (file.exists()) {
+                in = new FileInputStream(file);
+            } else {
+                in = getClass().getResourceAsStream("/micromouse/plan");
+            }
+            try {
+                read(in);
+            } finally {
+                in.close();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public Maze(int width, int height) {
+        this.width = width;
+        this.height = height;
+        for (int x = 0; x <= width; x++) {
+            for (int y = 0; y <= height; y++) {
+                nodes.add(new Node(x, y));
+            }
+        }
+        for (int col = 0; col < width; col++) {
+            for (int row = 0; row < height; row++) {
+                add(new Room(this, col, row));
+            }
+        }
+        start = room(0, 0);
+        finish = nodeAt(width / 2, width / 2);
     }
 
     public Node nodeAt(int x, int y) {
@@ -284,24 +309,24 @@ public class Maze extends ArrayList<Room> {
             edges.add(new Edge(n1, n2));
         }
     }
-    
-    public void wall(Node n1, Node n2) {
-        wall(n1.x, n1.y,n2.x,n2.y);
-    }
-    
-    public void wall(int x1,int y1,int x2,int y2){
 
-        if (x1>x2){
+    public void wall(Node n1, Node n2) {
+        wall(n1.x, n1.y, n2.x, n2.y);
+    }
+
+    public void wall(int x1, int y1, int x2, int y2) {
+
+        if (x1 > x2) {
             int tmp = x2;
             x2 = x1;
             x1 = tmp;
         }
-        if (y1>y2){
+        if (y1 > y2) {
             int tmp = y2;
             y2 = y1;
             y1 = tmp;
         }
-        
+
         for (int i = x1; i < x2; i++) {
             edge(i, y1, i + 1, y1);
         }
@@ -310,7 +335,6 @@ public class Maze extends ArrayList<Room> {
             edge(x2, i, x2, i + 1);
         }
     }
-    
 
     public void change() {
         for (ChangeListener listener : listeners) {
@@ -357,5 +381,5 @@ public class Maze extends ArrayList<Room> {
         }
         return true;
     }
-    
+
 }

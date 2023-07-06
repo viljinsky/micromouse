@@ -42,7 +42,7 @@ public class Mouse {
 
     Path path = new Path(null);
 
-    ArrayList graph;
+    ArrayList graph = new ArrayList();
 
     Maze maze;
 
@@ -71,7 +71,7 @@ public class Mouse {
         }
     }
 
-    public void step() throws Exception {
+    public boolean step() throws Exception {
 
         Room tmp;
 
@@ -83,9 +83,17 @@ public class Mouse {
                 maze.change();
 
                 if (maze.isFinish(room)) {
-                    System.out.println("GOALL");
+                    status = "goal";
                 }
-                return;
+                
+                if(path.room == null){
+                    path.room = room;
+                }
+                path.add(new Move(direction,1));
+                if (graph.isEmpty()){
+                    graph.add(path);
+                }
+                return true;
             }
         }
 
@@ -94,7 +102,7 @@ public class Mouse {
             if (tmp != null && !trace.contains(tmp)) {
                 direction = d;
                 maze.change();
-                return;
+                return true;
             }
         }
 
@@ -108,7 +116,10 @@ public class Mouse {
                         room = tmp;
                         direction = d;
                         maze.change();
-                        return;
+//                        graph.add(path);
+                        path = new Path(room);
+                        graph.add(path);
+                        return true;
                     }
                 }
             }
@@ -118,7 +129,9 @@ public class Mouse {
             room = trace.get(0);
             maze.change();
         }
-        throw new RuntimeException("no there room");
+        status = "no there room";
+        return false;
+        //throw new RuntimeException("no there room");
 
     }
 
@@ -133,7 +146,7 @@ public class Mouse {
             public void run() {
                 try {
                     while (flag) {
-                        step();
+                        if (!step()) break;
                         long t = System.currentTimeMillis();
                         do {
                         } while (t + delay > System.currentTimeMillis());
@@ -148,7 +161,15 @@ public class Mouse {
     }
 
     public void pause() {
-        flag = false;
+        flag = !flag;
+        if(flag){
+            start();
+        }
+    }
+    
+    String status = "unknow";
+    public String getStatus(){
+        return status;
     }
 
     public Mouse(Maze maze) {

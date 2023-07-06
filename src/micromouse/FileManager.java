@@ -2,6 +2,10 @@ package micromouse;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import javax.swing.AbstractAction;
 import javax.swing.JMenu;
 
@@ -10,13 +14,13 @@ import javax.swing.JMenu;
  * @author viljinsky
  */
 class FileManager {
-    
+
     public static final String NEW = "new";
     public static final String CLEAR = "clear";
     public static final String OPEN = "open";
     public static final String SAVE = "save";
     public static final String EXIT = "exit";
-    
+
     Browser browser;
 
     public FileManager(Browser browser) {
@@ -25,27 +29,32 @@ class FileManager {
 
     void doCommand(String command) {
         Maze maze = browser.maze;
-        switch (command) {
-            case CLEAR:
-                maze.edges.clear();
-                maze.change();
-                break;
-            case EXIT:
-                System.exit(0);
-            case SAVE:
-                StringBuilder stringBuilder = new StringBuilder();
-                stringBuilder.append(String.format("size = %d,%d\n", maze.width, maze.height));
-                for (Edge edge : maze.edges) {
-                    stringBuilder.append(String.format("edge = %d,%d,%d,%d\n", edge.node1.x, edge.node1.y, edge.node2.x, edge.node2.y));
+        try {
+            switch (command) {
+                case CLEAR:
+                    maze.edges.clear();
+                    maze.change();
+                    break;
+                case EXIT:
+                    System.exit(0);
+
+                case SAVE:
+                
+                try (OutputStream out = new FileOutputStream(new File("maze.ini"));) {
+                    maze.write(out);
+                    System.out.println("OK");
                 }
-                System.out.println("" + stringBuilder.toString());
+
                 break;
-            case NEW:
-            case OPEN:
-                browser.showMessage(command);
-                break;
-            default:
-                browser.showMessage(command + " not found");
+                case NEW:
+                case OPEN:
+                    browser.showMessage(command);
+                    break;
+                default:
+                    browser.showMessage(command + " not found");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -62,5 +71,5 @@ class FileManager {
         }
         return menu;
     }
-    
+
 }
