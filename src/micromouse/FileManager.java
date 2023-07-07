@@ -47,6 +47,12 @@ class FileManager {
 
                 break;
                 case NEW:
+                    browser.setMaze(new Maze(16,16));
+                    browser.mouse.reset();
+                    browser.repaint();
+                    browser.revalidate();
+                    break;
+                    
                 case OPEN:
                     browser.showMessage(command);
                     break;

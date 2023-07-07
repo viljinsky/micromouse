@@ -1,6 +1,5 @@
 package micromouse;
 
-import java.awt.Point;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -19,12 +18,12 @@ enum Direction {
         switch (this) {
             case WE:
                 return SN;
-            case NS:
-                return WE;
-            case EW:
-                return NS;
             case SN:
                 return EW;
+            case EW:
+                return NS;
+            case NS:
+                return WE;
             default:
                 return this;
         }
@@ -44,6 +43,21 @@ enum Direction {
                 return this;
         }
 
+    }
+    
+    public Direction back(){
+        switch (this){
+            case WE:
+                return EW;
+            case EW:
+                return WE;                
+            case SN:
+                return NS;
+            case NS:
+                return SN;
+            default:
+                return null;
+        }
     }
 
 };
@@ -138,10 +152,6 @@ class Room {
         down = new Edge(maze.nodeAt(col, row + 1), maze.nodeAt(col + 1, row + 1));
     }
 
-    public Point center() {
-        return new Point(col * Browser.EDGE_SIZE + Browser.EDGE_SIZE / 2, row * Browser.EDGE_SIZE + Browser.EDGE_SIZE / 2);
-    }
-
     @Override
     public String toString() {
         return "Room{col=" + col + "; row=" + row + "}";
@@ -157,7 +167,7 @@ class Room {
         }
         if (obj instanceof Room) {
             Room r = (Room) obj;
-            return center().equals(r.center());
+            return col == r.col && row==r.row ;
         }
         return false;
     }
@@ -172,8 +182,8 @@ public class Maze extends ArrayList<Room> {
 
     int width = -1;
     int height = -1;
-    ArrayList<Node> nodes = new ArrayList<>();
-    ArrayList<Edge> edges = new ArrayList<>();
+    ArrayList<Node> nodes;
+    ArrayList<Edge> edges;
     public Room start;
     public Node finish;
 
@@ -252,42 +262,6 @@ public class Maze extends ArrayList<Room> {
     }
 
     File file = new File("maze.ini");
-
-    public Maze() {
-        this(16, 16);
-        InputStream in;
-        try {
-            if (file.exists()) {
-                in = new FileInputStream(file);
-            } else {
-                in = getClass().getResourceAsStream("/micromouse/plan");
-            }
-            try {
-                read(in);
-            } finally {
-                in.close();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public Maze(int width, int height) {
-        this.width = width;
-        this.height = height;
-        for (int x = 0; x <= width; x++) {
-            for (int y = 0; y <= height; y++) {
-                nodes.add(new Node(x, y));
-            }
-        }
-        for (int col = 0; col < width; col++) {
-            for (int row = 0; row < height; row++) {
-                add(new Room(this, col, row));
-            }
-        }
-        start = room(0, 0);
-        finish = nodeAt(width / 2, width / 2);
-    }
 
     public Node nodeAt(int x, int y) {
         for (Node node : nodes) {
@@ -380,6 +354,44 @@ public class Maze extends ArrayList<Room> {
                 return !edges.contains(room.down);
         }
         return true;
+    }
+
+    public Maze() {
+        this(16, 16);
+        InputStream in;
+        try {
+            if (file.exists()) {
+                in = new FileInputStream(file);
+            } else {
+                in = getClass().getResourceAsStream("/micromouse/plan");
+            }
+            try {
+                read(in);
+            } finally {
+                in.close();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public Maze(int width, int height) {
+        this.width = width;
+        this.height = height;
+        nodes = new ArrayList<>();
+        edges=new ArrayList<>();
+        for (int x = 0; x <= width; x++) {
+            for (int y = 0; y <= height; y++) {
+                nodes.add(new Node(x, y));
+            }
+        }
+        for (int col = 0; col < width; col++) {
+            for (int row = 0; row < height; row++) {
+                add(new Room(this, col, row));
+            }
+        }
+        start = room(0, 0);
+        finish = nodeAt(width / 2, width / 2);
     }
 
 }
