@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -35,7 +36,9 @@ class CommandBar extends JPanel {
     public static final String RESET = "reset";
     public static final String STEP = "step";
     public static final String START = "start";
-    public static final String PAUSE = "pause";
+    public static final String STOP = "stop";
+
+    boolean pause;
 
     private void doCommand(String command) {
         try {
@@ -43,22 +46,47 @@ class CommandBar extends JPanel {
                 case RESET:
                     browser.graph = null;
                     mouse.reset();
-                    mouse.change();
+                    browser.repaint();
                     break;
 
                 case START:
-                    mouse.start();
-                    browser.graph = mouse.graph;
+
+                    new Thread() {
+                        @Override
+                        public void run() {
+                            pause = false;
+                            try {
+                                while (mouse.step()) {
+                                    browser.repaint();
+                                    if (pause) {
+                                        break;
+                                    }
+                                    long t = System.currentTimeMillis();
+                                    while (System.currentTimeMillis() < t + 10) {
+                                    }
+                                }
+                                mouse.graph.print();
+                                browser.graph = mouse.graph;
+                                browser.repaint();
+                                mouse.graph.print();
+
+                            } catch (Exception e) {
+                                System.err.println(e.getMessage());
+                            }
+                        }
+
+                    }.start();
+
                     break;
 
-                case PAUSE:
-                    mouse.pause();
+                case STOP:
+                    pause = true;
                     break;
 
                 case STEP:
                     if (mouse.step()) {
                         browser.graph = mouse.graph;
-                        mouse.change();
+                        browser.repaint();
                     }
                     break;
                 default:
@@ -83,7 +111,7 @@ class CommandBar extends JPanel {
         super(new FlowLayout(FlowLayout.LEFT));
         this.browser = browser;
         this.mouse = browser.mouse;
-        for (String command : new String[]{START, PAUSE, STEP, RESET}) {
+        for (String command : new String[]{START, STOP, STEP, RESET}) {
             if (command == null) {
                 add(new JLabel(" "));
             } else {
@@ -181,33 +209,29 @@ public class Browser extends JPanel implements ChangeListener {
         }
 
         for (Path path : graph) {
-
-            Room room = path.room;
-            Room next = path.room;
-            
-            g.setColor(Color.ORANGE);
-            Point p1 = roomCenter(room);
-            g.fillOval(p1.x - 4, p1.y - 4, 9, 9);
-
-            for (Move m : path) {
-                next = maze.next(room, m.direction);
-                Point p2 = roomCenter(next);
-                g.drawLine(p1.x, p1.y, p2.x, p2.y);
-                p1 = p2;
-                room = next;
+            if (!path.isEmpty()) {
+                Move start = path.get(0);
+                Point p = new Point(start.x*EDGE_SIZE+EDGE_SIZE/2,start.y*EDGE_SIZE+EDGE_SIZE/2);
+                g.setColor(Color.ORANGE);
+                for (Move m : path) {
+                    Point pNext = new Point(m.x*EDGE_SIZE+EDGE_SIZE/2,m.y*EDGE_SIZE+EDGE_SIZE/2);
+                    g.drawLine(p.x, p.y, pNext.x, pNext.y);
+                    p = pNext;
+                }
+                g.setColor(Color.red);
+                g.fillOval(start.x*EDGE_SIZE+EDGE_SIZE/2 -NODE_SIZE/2, start.y*EDGE_SIZE+EDGE_SIZE/2-NODE_SIZE/2, NODE_SIZE,NODE_SIZE);
             }
-            
-            g.setColor(Color.CYAN);
-            p1 = roomCenter(next);
-            g.fillOval(p1.x - 4, p1.y - 4, 9, 9);
-            
-
         }
 
     }
 
+    public Point roomPosition(Room room) {
+        return new Point(room.col, room.row);
+    }
+
     public Point roomCenter(Room room) {
-        return new Point(room.col * EDGE_SIZE + EDGE_SIZE / 2, room.row * EDGE_SIZE + Browser.EDGE_SIZE / 2);
+        Point position = roomPosition(room);
+        return new Point(position.x * EDGE_SIZE + EDGE_SIZE / 2, position.y * EDGE_SIZE + Browser.EDGE_SIZE / 2);
     }
 
     public Node nodeAt(Point p) {

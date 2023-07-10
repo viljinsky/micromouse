@@ -1,5 +1,6 @@
 package micromouse;
 
+import java.awt.Point;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -141,6 +142,10 @@ class Room {
 
     public boolean contain(Node node) {
         return upper.node1.equals(node) || upper.node2.equals(node) || down.node1.equals(node) || down.node2.equals(node);
+    }
+    
+    public Point position(){
+        return new Point(col, row);
     }
 
     public Room(Maze maze, int col, int row) {

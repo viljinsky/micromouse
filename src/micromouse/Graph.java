@@ -4,52 +4,73 @@
  */
 package micromouse;
 
+import java.awt.Point;
 import java.util.ArrayList;
 import java.util.StringJoiner;
 
-class Move {
+class Move extends Point{
 
     Path path;
 
-    Direction direction;
+    public Move(Path path) {
+        this.path = path;       
+    }
 
-    Integer count;
-
-    public Move(Path path, Direction direction, Integer count) {
+    public Move(Path path,Point position) {
+        super(position);
         this.path = path;
-        this.direction = direction;
-        this.count = count;
     }
 
     @Override
     public String toString() {
-        return direction.name();
+        return x+" "+y;
     }
+    
+    
+    
 
 }
 
 class Path extends ArrayList<Move> {
 
     Graph graph;
+    Point position;
+    
+    
 
-    Room room;
-
-    public Path(Graph grapth, Room room) {
-        this.graph = grapth;
-        this.room = room;
+    public Path(Graph graph,Point start) {
+        this.graph = graph;
+        this.position = start;
+        add(new Move(this,start));
     }
-
-    public void add(Direction direction) {
-        super.add(new Move(this, direction, 1));
-    }
-
-    public String toString() {
-        StringJoiner s = new StringJoiner("-", "{ col=" + room.col + " row=" + room.row + " (" + (isEmpty() ? "empty" : size()) + ")}", "\n");
-        for (Move m : this) {
-            s.add(m.toString());
+    
+    public void add(Direction d){
+        switch(d){
+            case WE:
+                position.x+=1;break;
+            case NS:
+                position.y+=1;break;
+            case EW:
+                position.x-=1;break;
+            case SN:
+                position.y-=1;break;
         }
-        return s.toString();
+        Move move = new Move(this,position);
+        add(move);
+        
     }
+
+    @Override
+    public String toString() {
+        StringJoiner joiner = new StringJoiner(",","graph{","}\n");
+        for(Move m:this){
+            joiner.add(m.toString());
+        }
+        
+        return joiner.toString();
+    }
+    
+    
 }
 
 /**
@@ -64,12 +85,12 @@ public class Graph extends ArrayList<Path> {
     }
 
     public Graph(Room room) {
-        path = new Path(this, room);
+        path = new Path(this, room.position());
         add(path);
     }
 
     public void add(Room room) {
-        path = new Path(this, room);
+        path = new Path(this, room.position());
         super.add(path);
     }
 
@@ -78,7 +99,7 @@ public class Graph extends ArrayList<Path> {
     }
     
     public void add(Room room,Direction direction){
-        Path tmp = new Path(this, room);
+        Path tmp = new Path(this, room.position());
         tmp.add(direction);
         add(tmp);
     }
