@@ -1,103 +1,101 @@
 package micromouse;
 
+import java.awt.Point;
 import java.util.ArrayList;
 
 public class Mouse {
 
     Graph graph;
-
+    Path path;
+    Direction direction;
+    Point position;
     Maze maze;
+    private ArrayList<Point> stack = new ArrayList<>();
 
-    Room room;
 
-    ArrayList<Room> trace = new ArrayList<>();
+    public Mouse(Maze maze) {
 
-    Direction direction = Direction.WE;
-
-    public void reset() {
-        graph = new Graph();
-        room = maze.start;        
+        this.maze = maze;
+        position = new Point(maze.start.col, maze.start.row);
         direction = Direction.WE;
-        trace.clear();
         graph = new Graph();
-        graph.add(room);
+        path = new Path(graph, position);
+        graph.add(path);
+
     }
 
+    public void reset() {
+        position = new Point(maze.start.col, maze.start.row);
+        direction = Direction.WE;
+        graph.clear();
+        path = new Path(graph, new Point(0, 0));
+        graph.add(path);
+        stack = new ArrayList<>();
 
-    public boolean step() throws Exception {
+    }
+    
+    public boolean step() {
 
-        // if first stap
-        if (graph == null) {
-            graph = new Graph(room);
-        }
-
-        Room tmp;
-
-        tmp = maze.next(room, direction);
-        if (tmp != null) {
-            if (!trace.contains(tmp)) {
-                trace.add(room);
-                room = tmp;
-
-                if (maze.isFinish(room)) {
-                    status = "goal";
-                }
-
-                graph.add(direction);
-                return true;
-//            } else {
-//                graph.add(direction);
+        Point next;
+        
+        int count = 0;
+        
+        for (Direction d : Direction.values()) {
+            next = maze.nextPoint(position, d);
+            if (next != null && !path.contains(next)) {
+                count++;
             }
         }
+        
+        if (count > 1) {
+            stack.add(0,position);
+            path = new Path(graph, position);
+            graph.add(path);
+        }
 
+        next = maze.nextPoint(position, direction);
+        if (next != null && !graph.contains(next)) {
+            position = next;
+            path.add(next);
+            stateText = "step";
+            return true;
+        }
+        
         for (Direction d : Direction.values()) {
-            tmp = maze.next(room, d);
-            if (tmp != null) {
-                if (!trace.contains(tmp)) {
+            next = maze.nextPoint(position, d);
+            if (next != null && !graph.contains(next)) {
+                direction = d;
+                stateText = "resolve";
+                return true;
+            }
+            if(next!=null && !path.contains(next)){
+                path.add(next);
+            }
+        }
+        
+        while (!stack.isEmpty()){
+            position = stack.remove(0);
+            for(Direction d:Direction.values()){
+                next = maze.nextPoint(position, d);
+                if (next !=null && !graph.contains(next)){
                     direction = d;
                     return true;
                 }
-            }
+            }            
+           
         }
+        
+        System.out.println("path not found");
+        stateText = "path not found";
 
-        if (trace.size() > 1) {
-            for (int n = trace.size() - 1; n >= 0; n--) {
-                tmp = trace.get(n);
-                for (Direction d : Direction.values()) {
-                    Room next = maze.next(tmp, d);
-                    if (next != null && !next.equals(room)) {
-                        if (!trace.contains(next)) {
-                            trace.add(room);
-                            room = tmp;
-                            direction = d;
-                            graph.add(room);
-                            return true;
-                        } else {
-                        }
-                    }
-                }
-            }
-        }
-
-        if (!trace.isEmpty()) {
-            trace.add(room);
-            room = trace.get(0);
-            direction = Direction.WE;
-        }
-        status = "no there room";
         return false;
-
     }
 
-    String status = "unknow";
+    String stateText = "mouse";
 
-    public String getStatus() {
-        return status;
-    }
-
-    public Mouse(Maze maze) {
-        this.maze = maze;
-        this.room = maze.room(0, 0);
+    public String state() {
+        maze.room(position.x, position.y);
+        return stateText;
     }
 
 }

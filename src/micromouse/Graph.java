@@ -1,47 +1,19 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package micromouse;
 
 import java.awt.Point;
 import java.util.ArrayList;
 import java.util.StringJoiner;
 
-class Move extends Point{
-
-    Path path;
-
-    public Move(Path path) {
-        this.path = path;       
-    }
-
-    public Move(Path path,Point position) {
-        super(position);
-        this.path = path;
-    }
-
-    @Override
-    public String toString() {
-        return x+" "+y;
-    }
-    
-    
-    
-
-}
-
-class Path extends ArrayList<Move> {
+class Path extends ArrayList<Point> {
 
     Graph graph;
+    
     Point position;
     
-    
-
     public Path(Graph graph,Point start) {
         this.graph = graph;
-        this.position = start;
-        add(new Move(this,start));
+        position = new Point(start);
+        add(position);
     }
     
     public void add(Direction d){
@@ -55,22 +27,28 @@ class Path extends ArrayList<Move> {
             case SN:
                 position.y-=1;break;
         }
-        Move move = new Move(this,position);
-        add(move);
+        add(position);
         
     }
 
     @Override
     public String toString() {
-        StringJoiner joiner = new StringJoiner(",","graph{","}\n");
-        for(Move m:this){
-            joiner.add(m.toString());
+        StringJoiner joiner = new StringJoiner(",","graph{","}");
+        for(Point p:this){
+            joiner.add(p.x+" "+p.y);
         }
-        
         return joiner.toString();
     }
     
     
+    
+    public Point end(){
+        return get(size()-1);
+    }
+    
+    public Point start(){
+        return get(0);
+    }
 }
 
 /**
@@ -84,30 +62,33 @@ public class Graph extends ArrayList<Path> {
     public Graph() {
     }
 
-    public Graph(Room room) {
-        path = new Path(this, room.position());
-        add(path);
-    }
-
-    public void add(Room room) {
-        path = new Path(this, room.position());
-        super.add(path);
-    }
-
     public void add(Direction direction) {
         path.add(direction);
     }
     
-    public void add(Room room,Direction direction){
-        Path tmp = new Path(this, room.position());
-        tmp.add(direction);
-        add(tmp);
-    }
-
     public void print() {
         for (Path p : this) {
-            System.out.print(p.toString());
+            System.out.println(p.toString());
         }
     }
 
+    public boolean contains(Point p){
+        for(Path t:this){
+            if (t.contains(p)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // поиск пути у котрого посленяя точка равна p
+    public Path find(Point p){
+        for(Path path:this){
+            if (p.equals(path.end())){
+                return path;
+            }
+        }
+        return null;
+    }
+    
 }

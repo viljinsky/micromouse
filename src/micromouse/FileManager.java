@@ -3,6 +3,7 @@ package micromouse;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import javax.swing.AbstractAction;
@@ -12,7 +13,7 @@ import javax.swing.JMenu;
  *
  * @author viljinsky
  */
-class FileManager {
+public class FileManager {
 
     public static final String NEW = "new";
     public static final String CLEAR = "clear";
@@ -31,8 +32,7 @@ class FileManager {
         try {
             switch (command) {
                 case CLEAR:
-                    maze.edges.clear();
-                    maze.change();
+                    maze.clear();
                     break;
                 case EXIT:
                     System.exit(0);
@@ -46,15 +46,18 @@ class FileManager {
 
                 break;
                 case NEW:
-                    browser.setMaze(new Maze(16,16));
+                    browser.maze.clear();
                     browser.mouse.reset();
                     browser.repaint();
                     browser.revalidate();
                     break;
-                    
-                case OPEN:
-                    browser.showMessage(command);
-                    break;
+
+                case OPEN:                    
+                    try (FileInputStream input = new FileInputStream(new File("maze.ini"));) {
+                    browser.maze.read(input);
+                    maze.change();
+                }
+                break;
                 default:
                     browser.showMessage(command + " not found");
             }
@@ -63,7 +66,7 @@ class FileManager {
         }
     }
 
-    JMenu menu() {
+    public JMenu menu() {
         JMenu menu = new JMenu("File");
         menu.setMnemonic(KeyEvent.VK_ALT);
         for (String command : new String[]{NEW, OPEN, SAVE, EXIT, CLEAR}) {

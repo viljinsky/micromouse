@@ -1,25 +1,15 @@
 package micromouse;
 
-import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Container;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import javax.swing.AbstractAction;
-import javax.swing.JButton;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JMenuBar;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import static micromouse.Direction.WE;
@@ -27,118 +17,7 @@ import static micromouse.Direction.NS;
 import static micromouse.Direction.EW;
 import static micromouse.Direction.SN;
 
-class CommandBar extends JPanel {
 
-    Mouse mouse;
-
-    Browser browser;
-
-    public static final String RESET = "reset";
-    public static final String STEP = "step";
-    public static final String START = "start";
-    public static final String STOP = "stop";
-
-    boolean pause;
-
-    private void doCommand(String command) {
-        try {
-            switch (command) {
-                case RESET:
-                    browser.graph = null;
-                    mouse.reset();
-                    browser.repaint();
-                    break;
-
-                case START:
-
-                    new Thread() {
-                        @Override
-                        public void run() {
-                            pause = false;
-                            try {
-                                while (mouse.step()) {
-                                    browser.repaint();
-                                    if (pause) {
-                                        break;
-                                    }
-                                    long t = System.currentTimeMillis();
-                                    while (System.currentTimeMillis() < t + 10) {
-                                    }
-                                }
-                                mouse.graph.print();
-                                browser.graph = mouse.graph;
-                                browser.repaint();
-                                mouse.graph.print();
-
-                            } catch (Exception e) {
-                                System.err.println(e.getMessage());
-                            }
-                        }
-
-                    }.start();
-
-                    break;
-
-                case STOP:
-                    pause = true;
-                    break;
-
-                case STEP:
-                    if (mouse.step()) {
-                        browser.graph = mouse.graph;
-                        browser.repaint();
-                    }
-                    break;
-                default:
-                    throw new Exception("command \"" + command + "\" unsupported yet");
-            }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(getParent(), e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private JButton createButton(String command) {
-        JButton button = new JButton(new AbstractAction(command) {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                doCommand(e.getActionCommand());
-            }
-        });
-        return button;
-    }
-
-    public CommandBar(Browser browser) {
-        super(new FlowLayout(FlowLayout.LEFT));
-        this.browser = browser;
-        this.mouse = browser.mouse;
-        for (String command : new String[]{START, STOP, STEP, RESET}) {
-            if (command == null) {
-                add(new JLabel(" "));
-            } else {
-                add(createButton(command));
-            }
-        }
-    }
-
-    public void setMouse(Mouse mouse) {
-        this.mouse = mouse;
-    }
-
-}
-
-class StatusBar extends JPanel {
-
-    JLabel label = new JLabel("StatusBar");
-
-    public StatusBar() {
-        setLayout(new FlowLayout(FlowLayout.LEFT));
-        add(label);
-    }
-
-    public void setStatusText(String statusText) {
-        label.setText(statusText);
-    }
-}
 
 class EdgeListener extends MouseAdapter {
 
@@ -201,28 +80,26 @@ public class Browser extends JPanel implements ChangeListener {
 
     Mouse mouse;
 
-    Graph graph;
-
     public void drawGraph(Graphics g) {
-        if (graph == null) {
+        if (mouse == null) {
             return;
         }
 
+        Graph graph = mouse.graph;
+        
         for (Path path : graph) {
+            g.setColor(Color.ORANGE);
             if (!path.isEmpty()) {
-                Move start = path.get(0);
+                Point start = new Point(path.get(0));
                 Point p = new Point(start.x*EDGE_SIZE+EDGE_SIZE/2,start.y*EDGE_SIZE+EDGE_SIZE/2);
-                g.setColor(Color.ORANGE);
-                for (Move m : path) {
+                for (Point m : path) {
                     Point pNext = new Point(m.x*EDGE_SIZE+EDGE_SIZE/2,m.y*EDGE_SIZE+EDGE_SIZE/2);
                     g.drawLine(p.x, p.y, pNext.x, pNext.y);
                     p = pNext;
                 }
-                g.setColor(Color.red);
-                g.fillOval(start.x*EDGE_SIZE+EDGE_SIZE/2 -NODE_SIZE/2, start.y*EDGE_SIZE+EDGE_SIZE/2-NODE_SIZE/2, NODE_SIZE,NODE_SIZE);
+                g.fillOval(start.x*EDGE_SIZE+EDGE_SIZE/2-4, start.y*EDGE_SIZE+EDGE_SIZE/2-4, 8,8);
             }
         }
-
     }
 
     public Point roomPosition(Room room) {
@@ -376,9 +253,13 @@ public class Browser extends JPanel implements ChangeListener {
 //        Mouse mouse = field.mouse;
         if (mouse != null) {
             // мышь
-            Room room = mouse.room;
+            
+            Point p = mouse.position;
+            Point center = new Point(p.x*EDGE_SIZE+EDGE_SIZE/2,p.y*EDGE_SIZE+EDGE_SIZE/2);
+            
+//            Room room = mouse.room;
             g.setColor(Color.red);
-            Point center = roomCenter(room);
+//            Point center = roomCenter(room);
             g.fillRect(center.x - 2, center.y - 2, 5, 5);
             switch (mouse.direction) {
                 case SN:
@@ -396,15 +277,15 @@ public class Browser extends JPanel implements ChangeListener {
             }
 
             // путь
-            g.setColor(Color.BLUE);
-            for (Room r : mouse.trace) {
-                Point p = roomCenter(r);
-                p.x -= 2;
-                p.y -= 2;
-                g.drawLine(p.x, p.y + 5, p.x + 5, p.y);
-                g.drawLine(p.x, p.y, p.x + 5, p.y + 5);
-
-            }
+//            g.setColor(Color.BLUE);
+//            for (Room r : mouse.trace) {
+//                Point p = roomCenter(r);
+//                p.x -= 2;
+//                p.y -= 2;
+//                g.drawLine(p.x, p.y + 5, p.x + 5, p.y);
+//                g.drawLine(p.x, p.y, p.x + 5, p.y + 5);
+//
+//            }
         }
     }
 
@@ -424,16 +305,17 @@ public class Browser extends JPanel implements ChangeListener {
     public void setMaze(Maze maze) {
         this.maze = maze;
         mouse = new Mouse(maze);
+        maze.addChangeListener(this);
         setPreferredSize(new Dimension(maze.width * EDGE_SIZE, maze.height * EDGE_SIZE));
     }
 
     public Browser() {
-        addMouseListener(new NodeListener(this));
-        addMouseListener(new EdgeListener(this));
+        this(new Maze(16, 16));
     }
 
     public Browser(Maze maze) {
-        this();
+        addMouseListener(new NodeListener(this));
+        addMouseListener(new EdgeListener(this));
         this.maze = maze;
         mouse = new Mouse(maze);
         setPreferredSize(new Dimension(maze.width * EDGE_SIZE, maze.height * EDGE_SIZE));
@@ -444,56 +326,3 @@ public class Browser extends JPanel implements ChangeListener {
     }
 }
 
-/**
- *
- * @author viljinsky
- */
-class App implements ChangeListener {
-
-    Browser browser;
-
-    StatusBar statusBar = new StatusBar();
-
-    CommandBar commandBar;
-
-    @Override
-    public void stateChanged(ChangeEvent e) {
-
-        Mouse mouse = browser.mouse;
-        if (mouse != null) {
-            statusBar.setStatusText(mouse.room.toString());
-        }
-    }
-
-    public void execute() {
-
-        Maze maze = new Maze();
-
-        browser = new Browser();
-        browser.setMaze(maze);
-        FileManager fileManager = new FileManager(browser);
-
-        commandBar = new CommandBar(browser);
-        commandBar.browser = browser;
-
-        maze.addChangeListener(browser);
-        maze.addChangeListener(this);
-
-        JFrame frame = new JFrame("MicroMouse v1.0");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        Container c = frame.getContentPane();
-        c.add(new JScrollPane(browser));
-        c.add(commandBar, BorderLayout.PAGE_START);
-        c.add(statusBar, BorderLayout.PAGE_END);
-
-        statusBar.setStatusText("maze" + maze.width + " X " + maze.height);
-
-        JMenuBar menuBar = new JMenuBar();
-        menuBar.add(fileManager.menu());
-        frame.setJMenuBar(menuBar);
-        frame.pack();
-        frame.setLocationRelativeTo(null);
-        frame.setVisible(true);
-    }
-
-}

@@ -2,7 +2,6 @@ package micromouse;
 
 import java.awt.Point;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -185,11 +184,16 @@ class Room {
  */
 public class Maze extends ArrayList<Room> {
 
-    int width = -1;
-    int height = -1;
+    int width;
+    
+    int height;
+    
     ArrayList<Node> nodes;
+    
     ArrayList<Edge> edges;
+    
     public Room start;
+    
     public Node finish;
 
     public void read(InputStream str) throws Exception {
@@ -331,18 +335,29 @@ public class Maze extends ArrayList<Room> {
         return new Room(this, col, row);
     }
 
-    public Room next(Room room, Direction direction) {
-        if (isOpen(room, direction)) {
-            switch (direction) {
-                case EW:
-                    return room(room.col - 1, room.row);
-                case WE:
-                    return room(room.col + 1, room.row);
-                case SN:
-                    return room(room.col, room.row - 1);
-                case NS:
-                    return room(room.col, room.row + 1);
-            }
+    public Point nextPoint(Point position,Direction direction){
+        
+        Room r = room(position.x, position.y);
+        if (!isOpen(r, direction)){
+            return null;
+        }
+        Point tmp = new Point(position);
+        switch(direction){
+            case WE:
+                tmp.x +=1;break;
+            case NS:
+                tmp.y+=1;break;
+            case EW:
+                tmp.x-=1;break;
+            case SN:
+                tmp.y-=1;break;
+            default:
+                throw new RuntimeException("invalid direction");
+        }
+        
+        if (tmp.x>=0 && tmp.x<width && tmp.y>=0 && tmp.y<height){
+            
+            return tmp;
         }
         return null;
     }
@@ -361,23 +376,10 @@ public class Maze extends ArrayList<Room> {
         return true;
     }
 
-    public Maze() {
-        this(16, 16);
-        InputStream in;
-        try {
-            if (file.exists()) {
-                in = new FileInputStream(file);
-            } else {
-                in = getClass().getResourceAsStream("/micromouse/plan");
-            }
-            try {
-                read(in);
-            } finally {
-                in.close();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    @Override
+    public void clear() {
+        edges.clear();
+        change();
     }
 
     public Maze(int width, int height) {
