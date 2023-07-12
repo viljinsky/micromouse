@@ -7,9 +7,13 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import javax.swing.AbstractListModel;
+import javax.swing.DefaultListModel;
 import javax.swing.JFrame;
+import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.ListModel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import static micromouse.Direction.WE;
@@ -18,6 +22,19 @@ import static micromouse.Direction.EW;
 import static micromouse.Direction.SN;
 
 
+class PathList extends JList{
+
+    
+    public void setGraph(Graph graph){
+        
+        DefaultListModel model = new DefaultListModel();
+        for(Path path:graph){
+            model.addElement(path);
+        }
+        
+        setModel(model);
+    }
+}
 
 class EdgeListener extends MouseAdapter {
 
@@ -79,6 +96,8 @@ public class Browser extends JPanel implements ChangeListener {
     Maze maze;
 
     Mouse mouse;
+    
+    PathList pathList = new PathList();
 
     public void drawGraph(Graphics g) {
         if (mouse == null) {
@@ -88,7 +107,7 @@ public class Browser extends JPanel implements ChangeListener {
         Graph graph = mouse.graph;
         
         for (Path path : graph) {
-            g.setColor(Color.ORANGE);
+            g.setColor(path.selected?Color.RED:Color.ORANGE);
             if (!path.isEmpty()) {
                 Point start = new Point(path.get(0));
                 Point p = new Point(start.x*EDGE_SIZE+EDGE_SIZE/2,start.y*EDGE_SIZE+EDGE_SIZE/2);
@@ -275,17 +294,6 @@ public class Browser extends JPanel implements ChangeListener {
                     g.drawLine(center.x, center.y, center.x, center.y - 10);
                     break;
             }
-
-            // путь
-//            g.setColor(Color.BLUE);
-//            for (Room r : mouse.trace) {
-//                Point p = roomCenter(r);
-//                p.x -= 2;
-//                p.y -= 2;
-//                g.drawLine(p.x, p.y + 5, p.x + 5, p.y);
-//                g.drawLine(p.x, p.y, p.x + 5, p.y + 5);
-//
-//            }
         }
     }
 
@@ -318,7 +326,7 @@ public class Browser extends JPanel implements ChangeListener {
         addMouseListener(new EdgeListener(this));
         this.maze = maze;
         mouse = new Mouse(maze);
-        setPreferredSize(new Dimension(maze.width * EDGE_SIZE, maze.height * EDGE_SIZE));
+        setPreferredSize(new Dimension(maze.width * EDGE_SIZE+1, maze.height * EDGE_SIZE+1));
     }
 
     public static void main(String[] args) {

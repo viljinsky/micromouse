@@ -1,14 +1,7 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package micromouse;
 
 import java.awt.FlowLayout;
-import java.awt.Point;
 import java.awt.event.ActionEvent;
-import java.util.ArrayList;
-import java.util.StringJoiner;
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -56,9 +49,17 @@ public class CommandBar extends JPanel {
                                     }
                                 }
 
-                                mouse.graph.print();
-                                browser.mouse.graph = mouse.graph;
-                                browser.repaint();
+//                                mouse.graph.print();
+
+                                for(int i=browser.mouse.graph.size()-1;i>=0;i--){
+                                    if (browser.mouse.graph.get(i).size()<2){
+                                        browser.mouse.graph.remove(i);
+                                    }
+                                }
+                               
+                                browser.pathList.setGraph(mouse.graph);
+//                                browser.mouse.graph = mouse.graph;
+//                                browser.repaint();
                             } catch (Exception e) {
                                 System.err.println(e.getMessage());
                             }
@@ -70,8 +71,9 @@ public class CommandBar extends JPanel {
                     break;
                 case STEP:
                     if (mouse.step()) {
-                        browser.mouse.graph = mouse.graph;
+//                        browser.mouse.graph = mouse.graph;
                         browser.repaint();
+                        browser.pathList.setGraph(mouse.graph);
                     }
                     break;
                 default:

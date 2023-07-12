@@ -10,6 +10,8 @@ class Path extends ArrayList<Point> {
     
     Point position;
     
+    boolean selected;
+    
     public Path(Graph graph,Point start) {
         this.graph = graph;
         position = new Point(start);
@@ -33,7 +35,7 @@ class Path extends ArrayList<Point> {
 
     @Override
     public String toString() {
-        StringJoiner joiner = new StringJoiner(",","graph{","}");
+        StringJoiner joiner = new StringJoiner(",","path{","}");
         for(Point p:this){
             joiner.add(p.x+" "+p.y);
         }
@@ -58,6 +60,12 @@ class Path extends ArrayList<Point> {
 public class Graph extends ArrayList<Path> {
 
     private Path path;
+    
+    public void setSelected(Path path){
+        for(Path t:this){
+            t.selected = t.equals(path);
+        }
+    }
 
     public Graph() {
     }
