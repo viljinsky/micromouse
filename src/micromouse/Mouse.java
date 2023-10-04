@@ -9,14 +9,14 @@ public class Mouse {
     Path path;
     Direction direction;
     Point position;
-    Maze maze;
+    Maze sensor;
     private ArrayList<Point> stack = new ArrayList<>();
 
 
-    public Mouse(Maze maze) {
+    public Mouse(Maze sensor) {
 
-        this.maze = maze;
-        position = new Point(maze.start.col, maze.start.row);
+        this.sensor = sensor;
+        position = new Point(0,0);
         direction = Direction.WE;
         graph = new Graph();
         path = new Path(graph, position);
@@ -25,10 +25,10 @@ public class Mouse {
     }
 
     public void reset() {
-        position = new Point(maze.start.col, maze.start.row);
-        direction = Direction.WE;
         graph.clear();
-        path = new Path(graph, new Point(0, 0));
+        position = new Point(0,0);
+        direction = Direction.WE;
+        path = new Path(graph, position);
         graph.add(path);
         stack = new ArrayList<>();
 
@@ -41,7 +41,7 @@ public class Mouse {
         int count = 0;
         
         for (Direction d : Direction.values()) {
-            next = maze.nextPoint(position, d);
+            next = sensor.nextPoint(position, d);
             if (next != null && !path.contains(next)) {
                 count++;
             }
@@ -53,7 +53,7 @@ public class Mouse {
             graph.add(path);
         }
 
-        next = maze.nextPoint(position, direction);
+        next = sensor.nextPoint(position, direction);
         if (next != null && !graph.contains(next)) {
             position = next;
             path.add(next);
@@ -62,7 +62,7 @@ public class Mouse {
         }
         
         for (Direction d : Direction.values()) {
-            next = maze.nextPoint(position, d);
+            next = sensor.nextPoint(position, d);
             if (next != null && !graph.contains(next)) {
                 direction = d;
                 stateText = "resolve";
@@ -76,7 +76,7 @@ public class Mouse {
         while (!stack.isEmpty()){
             position = stack.remove(0);
             for(Direction d:Direction.values()){
-                next = maze.nextPoint(position, d);
+                next = sensor.nextPoint(position, d);
                 if (next !=null && !graph.contains(next)){
                     direction = d;
                     return true;
@@ -94,7 +94,7 @@ public class Mouse {
     String stateText = "mouse";
 
     public String state() {
-        maze.room(position.x, position.y);
+        sensor.room(position.x, position.y);
         return stateText;
     }
 

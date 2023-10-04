@@ -4,7 +4,59 @@ import java.awt.Point;
 import java.util.ArrayList;
 import java.util.StringJoiner;
 
-class Path extends ArrayList<Point> {
+class Node extends Point{
+
+    public Node(int x, int y) {
+        super(x,y);
+    }
+
+    public Node(Point position) {
+        super(position);
+    }
+        
+    @Override
+    public String toString() {
+        return "Node{" + "x=" + x + "; y=" + y + '}';
+    }
+}
+
+class Edge {
+
+    Node node1;
+
+    Node node2;
+
+    public Edge(Node node1, Node node2) {
+        this.node1 = node1;
+        this.node2 = node2;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (obj == this) {
+            return true;
+        }
+        if (obj instanceof Edge) {
+            Edge e = (Edge) obj;
+
+            return (e.node1.equals(node1) && e.node2.equals(node2))
+                    || (e.node1.equals(node2) && e.node2.equals(node1));
+        }
+        return false;
+    }
+
+    @Override
+    public String toString() {
+        return "Edge{(" + node1.x + " " + node1.y + ");(" + node2.x + " " + node2.y + ")}";
+    }
+
+}
+
+
+class Path extends ArrayList<Node> {
 
     Graph graph;
     
@@ -15,8 +67,13 @@ class Path extends ArrayList<Point> {
     public Path(Graph graph,Point start) {
         this.graph = graph;
         position = new Point(start);
-        add(position);
+        add(new Node(position));
     }
+
+    public boolean add(Point position) {
+        return super.add(new Node(position)); 
+    }
+    
     
     public void add(Direction d){
         switch(d){
@@ -29,7 +86,7 @@ class Path extends ArrayList<Point> {
             case SN:
                 position.y-=1;break;
         }
-        add(position);
+        add(new Node(position));
         
     }
 
